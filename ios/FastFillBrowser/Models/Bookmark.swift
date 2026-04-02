@@ -3,6 +3,8 @@ import Foundation
 
 @Model
 class Bookmark {
+    #Index<Bookmark>([\.sortOrder], [\.domain])
+
     var id: String
     var url: String
     var title: String

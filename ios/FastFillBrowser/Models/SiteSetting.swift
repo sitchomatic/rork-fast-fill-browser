@@ -3,6 +3,8 @@ import Foundation
 
 @Model
 class SiteSetting {
+    #Index<SiteSetting>([\.domain])
+
     @Attribute(.unique) var domain: String
     var usernameSelector: String
     var passwordSelector: String

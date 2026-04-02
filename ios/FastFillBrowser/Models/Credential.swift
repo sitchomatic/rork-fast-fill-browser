@@ -3,11 +3,14 @@ import Foundation
 
 @Model
 class Credential {
+    #Unique<Credential>([\.domain, \.username])
+    #Index<Credential>([\.domain], [\.lastUsedAt])
+
     @Attribute(.unique) var id: String
     var domain: String
     var username: String
     var notes: String?
-    var totpSecret: String?
+    var totpSecret: Data?
     var createdAt: Date
     var updatedAt: Date
     var lastUsedAt: Date?
@@ -17,7 +20,7 @@ class Credential {
         domain: String,
         username: String,
         notes: String? = nil,
-        totpSecret: String? = nil
+        totpSecret: Data? = nil
     ) {
         self.id = UUID().uuidString
         self.domain = domain.lowercased()

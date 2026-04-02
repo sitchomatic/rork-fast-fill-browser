@@ -3,6 +3,8 @@ import Foundation
 
 @Model
 class BrowsingHistoryEntry {
+    #Index<BrowsingHistoryEntry>([\.visitedAt], [\.domain])
+
     var id: String
     var url: String
     var title: String
