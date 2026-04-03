@@ -1,13 +1,13 @@
 //
-//  FastFillBrowserUITests.swift
-//  FastFillBrowserUITests
+//  FastFillBrowser02UITests.swift
+//  FastFillBrowser02UITests
 //
 //  Created by Rork on April 2, 2026.
 //
 
 import XCTest
 
-final class FastFillBrowserUITests: XCTestCase {
+final class FastFillBrowser02UITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct FastFillBrowserApp: App {
+struct FastFillBrowser02App: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

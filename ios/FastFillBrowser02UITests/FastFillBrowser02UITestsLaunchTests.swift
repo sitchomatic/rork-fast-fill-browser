@@ -1,13 +1,13 @@
 //
-//  FastFillBrowserUITestsLaunchTests.swift
-//  FastFillBrowserUITests
+//  FastFillBrowser02UITestsLaunchTests.swift
+//  FastFillBrowser02UITests
 //
 //  Created by Rork on April 2, 2026.
 //
 
 import XCTest
 
-final class FastFillBrowserUITestsLaunchTests: XCTestCase {
+final class FastFillBrowser02UITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

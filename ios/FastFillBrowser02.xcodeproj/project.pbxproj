@@ -6,31 +6,46 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = FastFillBrowser;
+			remoteInfo = FastFillBrowser02;
 		};
 		105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = FastFillBrowser;
+			remoteInfo = FastFillBrowser02;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		105FC57A2E9EAD3100EA8BCF /* FastFillBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastFillBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5892E9EAD3200EA8BCF /* FastFillBrowserTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastFillBrowserTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5932E9EAD3200EA8BCF /* FastFillBrowserUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastFillBrowserUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC57A2E9EAD3100EA8BCF /* FastFillBrowser02.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastFillBrowser02.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5892E9EAD3200EA8BCF /* FastFillBrowser02Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastFillBrowser02Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5932E9EAD3200EA8BCF /* FastFillBrowser02UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastFillBrowser02UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		105FC57C2E9EAD3100EA8BCF /* FastFillBrowser02 */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FastFillBrowser02;
+			sourceTree = "<group>";
+		};
+		105FC58C2E9EAD3200EA8BCF /* FastFillBrowser02Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FastFillBrowser02Tests;
+			sourceTree = "<group>";
+		};
+		105FC5962E9EAD3200EA8BCF /* FastFillBrowser02UITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FastFillBrowser02UITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		105FC5772E9EAD3100EA8BCF /* Frameworks */ = {
@@ -56,31 +71,13 @@
 		};
 /* End PBXFrameworksBuildPhase section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* FastFillBrowser */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FastFillBrowser;
-			sourceTree = "<group>";
-		};
-		105FC58C2E9EAD3200EA8BCF /* FastFillBrowserTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FastFillBrowserTests;
-			sourceTree = "<group>";
-		};
-		105FC5962E9EAD3200EA8BCF /* FastFillBrowserUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FastFillBrowserUITests;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXGroup section */
 		105FC5712E9EAD3100EA8BCF = {
 			isa = PBXGroup;
 			children = (
-				105FC57C2E9EAD3100EA8BCF /* FastFillBrowser */,
-				105FC58C2E9EAD3200EA8BCF /* FastFillBrowserTests */,
-				105FC5962E9EAD3200EA8BCF /* FastFillBrowserUITests */,
+				105FC57C2E9EAD3100EA8BCF /* FastFillBrowser02 */,
+				105FC58C2E9EAD3200EA8BCF /* FastFillBrowser02Tests */,
+				105FC5962E9EAD3200EA8BCF /* FastFillBrowser02UITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,9 +85,9 @@
 		105FC57B2E9EAD3100EA8BCF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				105FC57A2E9EAD3100EA8BCF /* FastFillBrowser.app */,
-				105FC5892E9EAD3200EA8BCF /* FastFillBrowserTests.xctest */,
-				105FC5932E9EAD3200EA8BCF /* FastFillBrowserUITests.xctest */,
+				105FC57A2E9EAD3100EA8BCF /* FastFillBrowser02.app */,
+				105FC5892E9EAD3200EA8BCF /* FastFillBrowser02Tests.xctest */,
+				105FC5932E9EAD3200EA8BCF /* FastFillBrowser02UITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -98,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		105FC5792E9EAD3100EA8BCF /* FastFillBrowser */ = {
+		105FC5792E9EAD3100EA8BCF /* FastFillBrowser02 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser" */;
+			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser02" */;
 			buildPhases = (
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
@@ -111,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				105FC57C2E9EAD3100EA8BCF /* FastFillBrowser */,
+				105FC57C2E9EAD3100EA8BCF /* FastFillBrowser02 */,
 			);
-			name = FastFillBrowser;
+			name = FastFillBrowser02;
 			packageProductDependencies = (
 			);
-			productName = FastFillBrowser;
-			productReference = 105FC57A2E9EAD3100EA8BCF /* FastFillBrowser.app */;
+			productName = FastFillBrowser02;
+			productReference = 105FC57A2E9EAD3100EA8BCF /* FastFillBrowser02.app */;
 			productType = "com.apple.product-type.application";
 		};
-		105FC5882E9EAD3200EA8BCF /* FastFillBrowserTests */ = {
+		105FC5882E9EAD3200EA8BCF /* FastFillBrowser02Tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowserTests" */;
+			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser02Tests" */;
 			buildPhases = (
 				105FC5852E9EAD3200EA8BCF /* Sources */,
 				105FC5862E9EAD3200EA8BCF /* Frameworks */,
@@ -134,18 +131,18 @@
 				105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC58C2E9EAD3200EA8BCF /* FastFillBrowserTests */,
+				105FC58C2E9EAD3200EA8BCF /* FastFillBrowser02Tests */,
 			);
-			name = FastFillBrowserTests;
+			name = FastFillBrowser02Tests;
 			packageProductDependencies = (
 			);
-			productName = FastFillBrowserTests;
-			productReference = 105FC5892E9EAD3200EA8BCF /* FastFillBrowserTests.xctest */;
+			productName = FastFillBrowser02Tests;
+			productReference = 105FC5892E9EAD3200EA8BCF /* FastFillBrowser02Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		105FC5922E9EAD3200EA8BCF /* FastFillBrowserUITests */ = {
+		105FC5922E9EAD3200EA8BCF /* FastFillBrowser02UITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowserUITests" */;
+			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser02UITests" */;
 			buildPhases = (
 				105FC58F2E9EAD3200EA8BCF /* Sources */,
 				105FC5902E9EAD3200EA8BCF /* Frameworks */,
@@ -157,13 +154,13 @@
 				105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC5962E9EAD3200EA8BCF /* FastFillBrowserUITests */,
+				105FC5962E9EAD3200EA8BCF /* FastFillBrowser02UITests */,
 			);
-			name = FastFillBrowserUITests;
+			name = FastFillBrowser02UITests;
 			packageProductDependencies = (
 			);
-			productName = FastFillBrowserUITests;
-			productReference = 105FC5932E9EAD3200EA8BCF /* FastFillBrowserUITests.xctest */;
+			productName = FastFillBrowser02UITests;
+			productReference = 105FC5932E9EAD3200EA8BCF /* FastFillBrowser02UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -189,7 +186,8 @@
 					};
 				};
 			};
-			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FastFillBrowser" */;
+			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FastFillBrowser02" */;
+			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -198,16 +196,16 @@
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 105FC57B2E9EAD3100EA8BCF /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				105FC5792E9EAD3100EA8BCF /* FastFillBrowser */,
-				105FC5882E9EAD3200EA8BCF /* FastFillBrowserTests */,
-				105FC5922E9EAD3200EA8BCF /* FastFillBrowserUITests */,
-			);
-			packageReferences = (
+				105FC5792E9EAD3100EA8BCF /* FastFillBrowser02 */,
+				105FC5882E9EAD3200EA8BCF /* FastFillBrowser02Tests */,
+				105FC5922E9EAD3200EA8BCF /* FastFillBrowser02UITests */,
 			);
 		};
 /* End PBXProject section */
@@ -263,12 +261,12 @@
 /* Begin PBXTargetDependency section */
 		105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FastFillBrowser */;
+			target = 105FC5792E9EAD3100EA8BCF /* FastFillBrowser02 */;
 			targetProxy = 105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 		105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FastFillBrowser */;
+			target = 105FC5792E9EAD3100EA8BCF /* FastFillBrowser02 */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -481,7 +479,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FastFillBrowser.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FastFillBrowser";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FastFillBrowser0202.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FastFillBrowser02";
 			};
 			name = Debug;
 		};
@@ -503,7 +501,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FastFillBrowser.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FastFillBrowser";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FastFillBrowser0202.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FastFillBrowser02";
 			};
 			name = Release;
 		};
@@ -523,7 +521,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = FastFillBrowser;
+				TEST_TARGET_NAME = FastFillBrowser02;
 			};
 			name = Debug;
 		};
@@ -543,14 +541,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = FastFillBrowser;
+				TEST_TARGET_NAME = FastFillBrowser02;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FastFillBrowser" */ = {
+		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FastFillBrowser02" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59B2E9EAD3200EA8BCF /* Debug */,
@@ -559,7 +557,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser" */ = {
+		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser02" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59E2E9EAD3200EA8BCF /* Debug */,
@@ -568,7 +566,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowserTests" */ = {
+		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser02Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A12E9EAD3200EA8BCF /* Debug */,
@@ -577,7 +575,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowserUITests" */ = {
+		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FastFillBrowser02UITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
@@ -587,8 +585,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-
 	};
 	rootObject = 105FC5722E9EAD3100EA8BCF /* Project object */;
 }
