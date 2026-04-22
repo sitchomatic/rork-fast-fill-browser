@@ -127,6 +127,7 @@ struct VaultView: View {
                 let toDelete = credentials.filter { viewModel.selectedIDs.contains($0.id) }
                 viewModel.bulkDelete(toDelete, context: modelContext)
                 viewModel.isEditMode = false
+                viewModel.clearSelection()
             }
         } message: {
             Text("This permanently removes the selected credentials and their stored passwords.")
@@ -140,6 +141,7 @@ struct VaultView: View {
                 let toMove = credentials.filter { viewModel.selectedIDs.contains($0.id) }
                 viewModel.bulkMoveToExcludeList(toMove, context: modelContext)
                 viewModel.isEditMode = false
+                viewModel.clearSelection()
             }
         } message: {
             Text("Their domains will be skipped for auto-fill and save prompts, and the credentials will be removed.")

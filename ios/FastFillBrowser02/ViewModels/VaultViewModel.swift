@@ -60,19 +60,19 @@ class VaultViewModel {
     }
 
     /// Delete every credential in `credentials`, purging each keychain entry.
-    /// Returns the IDs of credentials that failed to delete from keychain.
-    @discardableResult
-    func bulkDelete(_ credentials: [Credential], context: ModelContext) -> [String] {
-        var failedIDs: [String] = []
+    func bulkDelete(_ credentials: [Credential], context: ModelContext) {
+        var failedIDs: Set<String> = []
         for credential in credentials {
             if KeychainService.shared.deletePassword(for: credential.id) {
                 context.delete(credential)
-                selectedIDs.remove(credential.id)
             } else {
-                failedIDs.append(credential.id)
+                failedIDs.insert(credential.id)
             }
         }
-        return failedIDs
+        // Only remove successfully deleted credentials from selection;
+        // leave any other selected IDs (including failures) untouched.
+        let successfulIDs = Set(credentials.map { $0.id }).subtracting(failedIDs)
+        selectedIDs.subtract(successfulIDs)
     }
 
     struct BulkMoveResult {
