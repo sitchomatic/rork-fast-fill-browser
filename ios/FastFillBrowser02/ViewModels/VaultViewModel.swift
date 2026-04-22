@@ -45,9 +45,18 @@ class VaultViewModel {
         selectedIDs.removeAll()
     }
 
-    func deleteCredential(_ credential: Credential, context: ModelContext) {
-        KeychainService.shared.deletePassword(for: credential.id)
+    /// Delete a credential + its keychain password. The SwiftData row is only
+    /// removed if the keychain purge succeeded, to avoid leaving an orphaned
+    /// keychain item behind a deleted row. Returns `true` if both the keychain
+    /// and model delete succeeded.
+    @discardableResult
+    func deleteCredential(_ credential: Credential, context: ModelContext) -> Bool {
+        guard KeychainService.shared.deletePassword(for: credential.id) else {
+            return false
+        }
         context.delete(credential)
+        selectedIDs.remove(credential.id)
+        return true
     }
 
     /// Delete every credential in `credentials`, purging each keychain entry.
@@ -66,18 +75,30 @@ class VaultViewModel {
         return failedIDs
     }
 
-    /// Move the given credentials to the exclude list: their domains are added
-    /// to `ExcludedDomain` (deduped) and the credentials + keychain entries
-    /// are removed. Returns the number of unique domains excluded.
+    struct BulkMoveResult {
+        /// Number of unique canonical domains added to the exclude list
+        /// (existing entries are not double-counted).
+        let domainsAdded: Int
+        /// Credential IDs whose keychain entry could not be purged. Their
+        /// SwiftData rows were left in place (see `bulkDelete`) so the caller
+        /// can surface the inconsistency instead of silently orphaning them.
+        let failedCredentialIDs: [String]
+    }
+
+    /// Move the given credentials to the exclude list: their canonical domains
+    /// are added to `ExcludedDomain` (deduped) and the credentials + keychain
+    /// entries are removed. The domain side is honored even when individual
+    /// credentials fail to delete, so the user's intent to stop autofill on
+    /// those domains still takes effect.
     @discardableResult
-    func bulkMoveToExcludeList(_ credentials: [Credential], context: ModelContext) -> Int {
+    func bulkMoveToExcludeList(_ credentials: [Credential], context: ModelContext) -> BulkMoveResult {
         let domains = Set(credentials.map { ExcludedDomain.canonicalize($0.domain) })
             .filter { !$0.isEmpty }
         for domain in domains {
             addExcludedDomain(domain, context: context)
         }
-        bulkDelete(credentials, context: context)
-        return domains.count
+        let failed = bulkDelete(credentials, context: context)
+        return BulkMoveResult(domainsAdded: domains.count, failedCredentialIDs: failed)
     }
 
     /// Add a domain to the exclude list if it isn't already excluded.

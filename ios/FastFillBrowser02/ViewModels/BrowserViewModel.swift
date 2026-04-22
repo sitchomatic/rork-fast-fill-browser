@@ -185,7 +185,13 @@ class BrowserViewModel {
 
     private func prefetchPasswords(for credentials: [Credential]) {
         let idsToFetch = credentials.map(\.id).filter { passwordCache[$0] == nil }
-        guard !idsToFetch.isEmpty else { return }
+        // All passwords are already in cache — skip the keychain round-trip but
+        // still prewarm, so the first rotation after a cached domain reload
+        // can actually use the prewarmed fill script.
+        guard !idsToFetch.isEmpty else {
+            prewarmNextCredential()
+            return
+        }
 
         let ids = idsToFetch
         Task {

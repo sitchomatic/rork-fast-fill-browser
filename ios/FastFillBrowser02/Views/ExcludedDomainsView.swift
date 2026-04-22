@@ -29,7 +29,28 @@ struct ExcludedDomainsView: View {
                 Text("Excluded domains are skipped for auto-fill and save prompts. Credentials saved for them stay hidden from the active vault.")
             }
 
-            if !excluded.isEmpty {
+            if excluded.isEmpty {
+                // Render the empty state inline rather than as a Form-level
+                // overlay so the "Add Domain" section above stays visually
+                // unobstructed (the overlay would center itself over the
+                // whole form on smaller screens).
+                Section {
+                    VStack(spacing: 8) {
+                        Image(systemName: "nosign")
+                            .font(.largeTitle)
+                            .foregroundStyle(.orange)
+                        Text("No Excluded Domains")
+                            .font(.headline)
+                        Text("Add a domain above to skip auto-fill and save prompts for it.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                }
+                .listRowBackground(Color.clear)
+            } else {
                 Section("Excluded (\(excluded.count))") {
                     ForEach(excluded) { item in
                         HStack {
@@ -49,15 +70,6 @@ struct ExcludedDomainsView: View {
                         }
                     }
                 }
-            }
-        }
-        .overlay {
-            if excluded.isEmpty {
-                ContentUnavailableView(
-                    "No Excluded Domains",
-                    systemImage: "nosign",
-                    description: Text("Add a domain above to skip auto-fill and save prompts for it.")
-                )
             }
         }
         .navigationTitle("Excluded Domains")

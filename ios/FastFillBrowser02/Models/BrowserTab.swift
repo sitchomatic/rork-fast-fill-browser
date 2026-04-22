@@ -30,7 +30,8 @@ class BrowserTab: Identifiable {
     }
 
     var domain: String {
-        url?.host(percentEncoded: false)?.lowercased().replacingOccurrences(of: "www.", with: "") ?? ""
+        guard let host = url?.host(percentEncoded: false)?.lowercased() else { return "" }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
     var displayURL: String {

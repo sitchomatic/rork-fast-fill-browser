@@ -165,4 +165,27 @@ struct VaultSortTests {
             "a.com/alice", "a.com/bob", "b.com/alice",
         ])
     }
+
+    // MARK: - Domain normalization parity
+
+    @Test @MainActor
+    func extractDomain_onlyStripsLeadingWww() {
+        // Parity with `ExcludedDomain.canonicalize` and `BrowserTab.domain`:
+        // only a *leading* `www.` is stripped.
+        #expect(CredentialImportService.extractDomain(from: "https://www.example.com/login") == "example.com")
+        #expect(CredentialImportService.extractDomain(from: "example.com") == "example.com")
+        #expect(CredentialImportService.extractDomain(from: "awww.example.com") == "awww.example.com")
+        #expect(CredentialImportService.extractDomain(from: "HTTPS://Example.COM") == "example.com")
+    }
+
+    // MARK: - Bulk delete / move-to-exclude result contracts
+
+    @Test @MainActor
+    func bulkMoveResult_defaultFieldsAreIndependent() {
+        // Keep the BulkMoveResult contract pinned so the callers in
+        // VaultView can rely on both fields being populated.
+        let r = VaultViewModel.BulkMoveResult(domainsAdded: 3, failedCredentialIDs: ["x"])
+        #expect(r.domainsAdded == 3)
+        #expect(r.failedCredentialIDs == ["x"])
+    }
 }

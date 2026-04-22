@@ -34,8 +34,11 @@ struct BrowserView: View {
         }
         .sheet(item: $viewModel.presentedSheet, onDismiss: {
             // Vault / Excluded Domains / Site Settings may have changed — refresh
-            // the caches the browser relies on for automation.
+            // the caches the browser relies on for automation, and drop any
+            // cached credential references that may point at rows the user
+            // just deleted or moved to the exclude list (stale SwiftData refs).
             viewModel.reloadExcludedDomains()
+            viewModel.invalidateCredentialCache()
         }) { sheet in
             sheetContent(for: sheet)
         }
