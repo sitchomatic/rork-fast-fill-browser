@@ -44,7 +44,10 @@ class BrowserViewModel {
     private var credentialCache: [String: [Credential]] = [:]
     private var passwordCache: [String: String] = [:]
     private var siteSettingCache: [String: SiteSetting?] = [:]
+    private var excludedDomainCache: Set<String> = []
+    private var excludedDomainCacheLoaded: Bool = false
     private var pendingFillScript: String?
+    private var pendingFillScriptIndex: Int?
     private var historyDebounceTask: Task<Void, Never>?
     private var lastHistoryURL: String = ""
     private var sureLoginTask: Task<Void, Never>?
@@ -56,6 +59,7 @@ class BrowserViewModel {
 
     func setup(modelContext: ModelContext) {
         self.modelContext = modelContext
+        reloadExcludedDomains()
         if tabs.isEmpty {
             addNewTab()
         }
@@ -216,17 +220,45 @@ class BrowserViewModel {
         siteSettingCache.removeValue(forKey: domain.lowercased())
     }
 
+    // MARK: - Excluded Domains
+
+    /// Returns true when the user has excluded this domain from auto-fill /
+    /// save prompts. Results are cached and invalidated on-demand.
+    func isDomainExcluded(_ domain: String) -> Bool {
+        let lowDomain = domain.lowercased()
+        guard !lowDomain.isEmpty else { return false }
+        if !excludedDomainCacheLoaded { reloadExcludedDomains() }
+        return excludedDomainCache.contains(lowDomain)
+    }
+
+    func reloadExcludedDomains() {
+        guard let context = modelContext else {
+            excludedDomainCache = []
+            excludedDomainCacheLoaded = true
+            return
+        }
+        let descriptor = FetchDescriptor<ExcludedDomain>()
+        if let results = try? context.fetch(descriptor) {
+            excludedDomainCache = Set(results.map { $0.domain })
+        } else {
+            excludedDomainCache = []
+        }
+        excludedDomainCacheLoaded = true
+    }
+
     // MARK: - Pre-warm Next Credential (#16)
 
     private func prewarmNextCredential() {
         guard matchingCredentials.count > 1 else {
             pendingFillScript = nil
+            pendingFillScriptIndex = nil
             return
         }
         let nextIndex = (currentRotationIndex + 1) % matchingCredentials.count
         let nextCredential = matchingCredentials[nextIndex]
         guard let password = passwordCache[nextCredential.id] else {
             pendingFillScript = nil
+            pendingFillScriptIndex = nil
             return
         }
         let siteSetting = fetchSiteSetting(for: activeTab?.domain ?? "")
@@ -236,6 +268,7 @@ class BrowserViewModel {
             usernameSelector: siteSetting?.usernameSelector,
             passwordSelector: siteSetting?.passwordSelector
         )
+        pendingFillScriptIndex = nextIndex
     }
 
     // MARK: - Credential Rotation (RC)
@@ -250,9 +283,12 @@ class BrowserViewModel {
         let siteSetting = fetchSiteSetting(for: activeTab?.domain ?? "")
 
         let script: String
-        if let pending = pendingFillScript, currentRotationIndex == (currentRotationIndex) {
+        if let pending = pendingFillScript,
+           let pendingIndex = pendingFillScriptIndex,
+           pendingIndex == currentRotationIndex {
             script = pending
             pendingFillScript = nil
+            pendingFillScriptIndex = nil
         } else {
             guard let password = getCachedPassword(for: credential.id) else {
                 showToast("Password not found in keychain")
@@ -442,6 +478,13 @@ class BrowserViewModel {
     // MARK: - Form Detection
 
     func checkForLoginForm() {
+        // Honor the global "Auto-fill on Page Load" toggle and the per-domain
+        // exclude list — no detection should run if the user has opted out.
+        let autoFillEnabled = UserDefaults.standard.object(forKey: "autoFillOnPageLoad") as? Bool ?? true
+        guard autoFillEnabled else { return }
+        let domain = activeTab?.domain ?? ""
+        guard !isDomainExcluded(domain) else { return }
+
         let script = JavaScriptInjectionService.detectLoginFormScript()
         activeTab?.webView?.evaluateJavaScript(script) { [weak self] result, _ in
             Task { @MainActor in
@@ -478,6 +521,13 @@ class BrowserViewModel {
     }
 
     func detectAndOfferSave() {
+        // Honor the global "Offer to Save New Passwords" toggle and the
+        // per-domain exclude list.
+        let offerEnabled = UserDefaults.standard.object(forKey: "offerToSavePasswords") as? Bool ?? true
+        guard offerEnabled else { return }
+        let domain = activeTab?.domain ?? ""
+        guard !isDomainExcluded(domain) else { return }
+
         let script = JavaScriptInjectionService.extractFilledCredentialsScript()
         activeTab?.webView?.evaluateJavaScript(script) { [weak self] result, _ in
             Task { @MainActor in
@@ -502,6 +552,12 @@ class BrowserViewModel {
 
     func saveDetectedCredential() {
         guard let context = modelContext, let domain = activeTab?.domain else { return }
+        guard !isDomainExcluded(domain) else {
+            showToast("Domain is on the exclude list")
+            detectedUsername = ""
+            detectedPassword = ""
+            return
+        }
         let credential = Credential(domain: domain, username: detectedUsername)
         context.insert(credential)
         _ = KeychainService.shared.savePassword(detectedPassword, for: credential.id)

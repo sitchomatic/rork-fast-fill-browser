@@ -5,43 +5,80 @@ struct VaultView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Credential.domain) private var credentials: [Credential]
+    @Query(sort: \ExcludedDomain.domain) private var excludedDomains: [ExcludedDomain]
     @State private var viewModel = VaultViewModel()
+    @State private var showDeleteAllConfirmation: Bool = false
+    @State private var showBulkDeleteConfirmation: Bool = false
+    @State private var showBulkExcludeConfirmation: Bool = false
+
+    private var excludedDomainSet: Set<String> {
+        Set(excludedDomains.map { $0.domain })
+    }
 
     private var filteredCredentials: [Credential] {
-        guard !viewModel.searchText.isEmpty else { return credentials }
+        // Credentials whose domain is on the exclude list are hidden from the
+        // active vault — they will instead appear in the "Excluded" sheet.
+        let base = credentials.filter { !excludedDomainSet.contains($0.domain) }
+        guard !viewModel.searchText.isEmpty else { return base }
         let search = viewModel.searchText.lowercased()
-        return credentials.filter {
+        return base.filter {
             $0.domain.localizedStandardContains(search) ||
             $0.username.localizedStandardContains(search)
         }
     }
 
+    /// Groups for the current sort option. Groups are ordered by the "best"
+    /// credential in each group (e.g. most-recently-used domain first for
+    /// `.recentlyUsed`) so the top of the list is always the most relevant.
     private var groupedCredentials: [(String, [Credential])] {
-        let grouped = Dictionary(grouping: filteredCredentials) { $0.domain }
-        return grouped.sorted { $0.key < $1.key }
+        let sorted = VaultViewModel.sortCredentials(filteredCredentials, by: viewModel.sortOption)
+        var order: [String] = []
+        var groups: [String: [Credential]] = [:]
+        for credential in sorted {
+            let key = credential.displayDomain
+            if groups[key] == nil {
+                order.append(key)
+                groups[key] = []
+            }
+            groups[key, default: []].append(credential)
+        }
+        return order.map { ($0, groups[$0] ?? []) }
     }
 
     var body: some View {
         List {
+            if !viewModel.isEditMode && viewModel.searchText.isEmpty && !excludedDomains.isEmpty {
+                Section {
+                    Button {
+                        viewModel.isShowingExcludedDomains = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "nosign")
+                                .foregroundStyle(.orange)
+                            Text("Excluded Domains")
+                            Spacer()
+                            Text("\(excludedDomains.count)")
+                                .foregroundStyle(.secondary)
+                                .font(.subheadline)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.quaternary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
             ForEach(groupedCredentials, id: \.0) { domain, creds in
                 Section(domain) {
                     ForEach(creds) { credential in
-                        Button {
-                            viewModel.selectedCredential = credential
-                        } label: {
-                            credentialRow(credential)
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button("Delete", role: .destructive) {
-                                viewModel.deleteCredential(credential, context: modelContext)
-                            }
-                        }
+                        credentialRowButton(credential)
                     }
                 }
             }
         }
         .listStyle(.insetGrouped)
+        .environment(\.editMode, editModeBinding)
         .overlay {
             if credentials.isEmpty {
                 ContentUnavailableView(
@@ -49,49 +86,188 @@ struct VaultView: View {
                     systemImage: "lock.shield",
                     description: Text("Add credentials manually or import from another browser")
                 )
+            } else if filteredCredentials.isEmpty && !viewModel.searchText.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
             }
         }
         .searchable(text: $viewModel.searchText, prompt: "Search credentials")
         .navigationTitle("Vault")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Done") { dismiss() }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Add Credential", systemImage: "plus") {
-                        viewModel.isShowingAddCredential = true
-                    }
-                    Button("Import", systemImage: "square.and.arrow.down") {
-                        viewModel.isShowingImport = true
-                    }
-                    Button("Password Generator", systemImage: "dice") {
-                        viewModel.isShowingPasswordGenerator = true
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                }
+        .toolbar { toolbarContent }
+        .safeAreaInset(edge: .bottom) {
+            if viewModel.isEditMode {
+                bulkActionBar
             }
         }
         .sheet(isPresented: $viewModel.isShowingAddCredential) {
-            NavigationStack {
-                CredentialFormView()
-            }
+            NavigationStack { CredentialFormView() }
         }
         .sheet(item: $viewModel.selectedCredential) { credential in
-            NavigationStack {
-                CredentialDetailView(credential: credential)
-            }
+            NavigationStack { CredentialDetailView(credential: credential) }
         }
         .sheet(isPresented: $viewModel.isShowingImport) {
-            NavigationStack {
-                ImportCredentialsView()
-            }
+            NavigationStack { ImportCredentialsView() }
         }
         .sheet(isPresented: $viewModel.isShowingPasswordGenerator) {
-            NavigationStack {
-                PasswordGeneratorView()
+            NavigationStack { PasswordGeneratorView() }
+        }
+        .sheet(isPresented: $viewModel.isShowingExcludedDomains) {
+            NavigationStack { ExcludedDomainsView() }
+        }
+        .confirmationDialog(
+            "Delete \(viewModel.selectedIDs.count) credential(s)?",
+            isPresented: $showBulkDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                let toDelete = credentials.filter { viewModel.selectedIDs.contains($0.id) }
+                viewModel.bulkDelete(toDelete, context: modelContext)
+                viewModel.isEditMode = false
+            }
+        } message: {
+            Text("This permanently removes the selected credentials and their stored passwords.")
+        }
+        .confirmationDialog(
+            "Move \(viewModel.selectedIDs.count) credential(s) to the exclude list?",
+            isPresented: $showBulkExcludeConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Move to Exclude List", role: .destructive) {
+                let toMove = credentials.filter { viewModel.selectedIDs.contains($0.id) }
+                let count = viewModel.bulkMoveToExcludeList(toMove, context: modelContext)
+                viewModel.isEditMode = false
+                _ = count
+            }
+        } message: {
+            Text("Their domains will be skipped for auto-fill and save prompts, and the credentials will be removed.")
+        }
+        .confirmationDialog(
+            "Clear all credentials?",
+            isPresented: $showDeleteAllConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear All", role: .destructive) {
+                viewModel.bulkDelete(Array(credentials), context: modelContext)
+            }
+        } message: {
+            Text("This permanently removes every saved credential and its stored password.")
+        }
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            if viewModel.isEditMode {
+                Button("Done") {
+                    viewModel.isEditMode = false
+                    viewModel.clearSelection()
+                }
+            } else {
+                Button("Done") { dismiss() }
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Section("Sort By") {
+                    Picker("Sort", selection: $viewModel.sortOption) {
+                        ForEach(VaultSortOption.allCases) { option in
+                            Label(option.rawValue, systemImage: option.systemImage).tag(option)
+                        }
+                    }
+                }
+                Divider()
+                Button("Select", systemImage: "checkmark.circle") {
+                    viewModel.isEditMode = true
+                }
+                .disabled(credentials.isEmpty)
+                Divider()
+                Button("Add Credential", systemImage: "plus") {
+                    viewModel.isShowingAddCredential = true
+                }
+                Button("Import", systemImage: "square.and.arrow.down") {
+                    viewModel.isShowingImport = true
+                }
+                Button("Password Generator", systemImage: "dice") {
+                    viewModel.isShowingPasswordGenerator = true
+                }
+                Divider()
+                Button("Excluded Domains", systemImage: "nosign") {
+                    viewModel.isShowingExcludedDomains = true
+                }
+                Button("Clear All Credentials", systemImage: "trash", role: .destructive) {
+                    showDeleteAllConfirmation = true
+                }
+                .disabled(credentials.isEmpty)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+        }
+    }
+
+    // MARK: - Bulk action bar
+
+    private var bulkActionBar: some View {
+        HStack(spacing: 16) {
+            Button {
+                showBulkExcludeConfirmation = true
+            } label: {
+                Label("Exclude", systemImage: "nosign")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.orange)
+            .disabled(viewModel.selectedIDs.isEmpty)
+
+            Button(role: .destructive) {
+                showBulkDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+            .disabled(viewModel.selectedIDs.isEmpty)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    // MARK: - Rows
+
+    @ViewBuilder
+    private func credentialRowButton(_ credential: Credential) -> some View {
+        if viewModel.isEditMode {
+            Button {
+                viewModel.toggleSelection(credential)
+            } label: {
+                HStack {
+                    Image(systemName: viewModel.selectedIDs.contains(credential.id)
+                          ? "checkmark.circle.fill"
+                          : "circle")
+                        .font(.title3)
+                        .foregroundStyle(viewModel.selectedIDs.contains(credential.id) ? .cyan : .secondary)
+                    credentialRow(credential)
+                }
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button {
+                viewModel.selectedCredential = credential
+            } label: {
+                credentialRow(credential)
+            }
+            .buttonStyle(.plain)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                    viewModel.deleteCredential(credential, context: modelContext)
+                }
+                Button("Exclude", systemImage: "nosign") {
+                    viewModel.bulkMoveToExcludeList([credential], context: modelContext)
+                }
+                .tint(.orange)
             }
         }
     }
@@ -133,9 +309,20 @@ struct VaultView: View {
 
             Spacer()
 
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.quaternary)
+            if !viewModel.isEditMode {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.quaternary)
+            }
         }
+    }
+
+    // MARK: - Edit-mode glue
+
+    private var editModeBinding: Binding<EditMode> {
+        Binding(
+            get: { viewModel.isEditMode ? .active : .inactive },
+            set: { viewModel.isEditMode = ($0 == .active) }
+        )
     }
 }

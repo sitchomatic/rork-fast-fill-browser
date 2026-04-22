@@ -7,6 +7,7 @@ struct AppSettingsView: View {
     @AppStorage("autoFillOnPageLoad") private var autoFillOnLoad: Bool = true
     @AppStorage("offerToSavePasswords") private var offerToSave: Bool = true
     @AppStorage("defaultSearchEngine") private var searchEngine: String = "Google"
+    @State private var isShowingExcludedDomains: Bool = false
 
     var body: some View {
         Form {
@@ -25,6 +26,19 @@ struct AppSettingsView: View {
             Section("Auto Fill") {
                 Toggle("Auto-fill on Page Load", isOn: $autoFillOnLoad)
                 Toggle("Offer to Save New Passwords", isOn: $offerToSave)
+
+                Button {
+                    isShowingExcludedDomains = true
+                } label: {
+                    HStack {
+                        Label("Excluded Domains", systemImage: "nosign")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
             }
 
             Section("Browser") {
@@ -62,6 +76,9 @@ struct AppSettingsView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Done") { dismiss() }
             }
+        }
+        .sheet(isPresented: $isShowingExcludedDomains) {
+            NavigationStack { ExcludedDomainsView() }
         }
     }
 }

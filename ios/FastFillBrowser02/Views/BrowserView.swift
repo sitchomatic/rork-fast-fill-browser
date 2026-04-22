@@ -32,7 +32,11 @@ struct BrowserView: View {
             await WebViewConfigurationFactory.shared.prepare()
             DNSPrewarmService.shared.prewarmTopDomains(modelContext: modelContext)
         }
-        .sheet(item: $viewModel.presentedSheet) { sheet in
+        .sheet(item: $viewModel.presentedSheet, onDismiss: {
+            // Vault / Excluded Domains / Site Settings may have changed — refresh
+            // the caches the browser relies on for automation.
+            viewModel.reloadExcludedDomains()
+        }) { sheet in
             sheetContent(for: sheet)
         }
         .alert("Save Login?", isPresented: $viewModel.isShowingSaveCredentialAlert) {
