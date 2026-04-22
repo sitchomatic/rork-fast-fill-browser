@@ -47,7 +47,13 @@ class BrowserViewModel {
     private var excludedDomainCache: Set<String> = []
     private var excludedDomainCacheLoaded: Bool = false
     private var pendingFillScript: String?
-    private var pendingFillScriptIndex: Int?
+    /// The credential the prewarmed fill script was built for. We key on the
+    /// credential ID (and not just the rotation index) so that a prewarm
+    /// left over from a previous domain/matching-set cannot be used against
+    /// a different credential after navigation — indices collide (both
+    /// reset to 0 after `loadMatchingCredentials`) but credential IDs are
+    /// unique UUIDs.
+    private var pendingFillScriptCredentialID: String?
     private var historyDebounceTask: Task<Void, Never>?
     private var lastHistoryURL: String = ""
     private var sureLoginTask: Task<Void, Never>?
@@ -137,6 +143,11 @@ class BrowserViewModel {
 
     func loadMatchingCredentials(for domain: String) {
         let lowDomain = domain.lowercased()
+        // A prewarmed script always belongs to the *previous* matching-set.
+        // Drop it on every load so a stale script from domain A can never be
+        // fired against a form on domain B.
+        pendingFillScript = nil
+        pendingFillScriptCredentialID = nil
 
         if let cached = credentialCache[lowDomain] {
             matchingCredentials = cached
@@ -251,20 +262,19 @@ class BrowserViewModel {
     private func prewarmNextCredential() {
         guard matchingCredentials.count > 1 else {
             pendingFillScript = nil
-            pendingFillScriptIndex = nil
+            pendingFillScriptCredentialID = nil
             return
         }
         // `currentRotationIndex` already points at the credential that will be
         // filled on the *next* `rotateCredential()` call (it is incremented
         // before this function is invoked), so prewarm that index — not one
         // beyond it — otherwise the cache is always two steps ahead and the
-        // `pendingIndex == currentRotationIndex` check at the fill site never
-        // matches.
+        // credential-ID check at the fill site never matches.
         let nextIndex = currentRotationIndex % matchingCredentials.count
         let nextCredential = matchingCredentials[nextIndex]
         guard let password = passwordCache[nextCredential.id] else {
             pendingFillScript = nil
-            pendingFillScriptIndex = nil
+            pendingFillScriptCredentialID = nil
             return
         }
         let siteSetting = fetchSiteSetting(for: activeTab?.domain ?? "")
@@ -274,7 +284,7 @@ class BrowserViewModel {
             usernameSelector: siteSetting?.usernameSelector,
             passwordSelector: siteSetting?.passwordSelector
         )
-        pendingFillScriptIndex = nextIndex
+        pendingFillScriptCredentialID = nextCredential.id
     }
 
     // MARK: - Credential Rotation (RC)
@@ -290,11 +300,11 @@ class BrowserViewModel {
 
         let script: String
         if let pending = pendingFillScript,
-           let pendingIndex = pendingFillScriptIndex,
-           pendingIndex == currentRotationIndex {
+           let pendingID = pendingFillScriptCredentialID,
+           pendingID == credential.id {
             script = pending
             pendingFillScript = nil
-            pendingFillScriptIndex = nil
+            pendingFillScriptCredentialID = nil
         } else {
             guard let password = getCachedPassword(for: credential.id) else {
                 showToast("Password not found in keychain")
