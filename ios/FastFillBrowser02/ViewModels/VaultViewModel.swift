@@ -60,8 +60,10 @@ class VaultViewModel {
                 failedIDs.insert(credential.id)
             }
         }
-        // Only remove successfully deleted credentials from selection
-        selectedIDs = selectedIDs.intersection(failedIDs)
+        // Only remove successfully deleted credentials from selection;
+        // leave any other selected IDs (including failures) untouched.
+        let successfulIDs = Set(credentials.map { $0.id }).subtracting(failedIDs)
+        selectedIDs.subtract(successfulIDs)
     }
 
     /// Move the given credentials to the exclude list: their domains are added
