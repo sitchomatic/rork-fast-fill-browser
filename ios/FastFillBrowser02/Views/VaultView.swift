@@ -184,7 +184,7 @@ struct VaultView: View {
                 Button("Select", systemImage: "checkmark.circle") {
                     viewModel.isEditMode = true
                 }
-                .disabled(credentials.isEmpty)
+                .disabled(filteredCredentials.isEmpty)
                 Divider()
                 Button("Add Credential", systemImage: "plus") {
                     viewModel.isShowingAddCredential = true

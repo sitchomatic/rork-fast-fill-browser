@@ -51,12 +51,19 @@ class VaultViewModel {
     }
 
     /// Delete every credential in `credentials`, purging each keychain entry.
-    func bulkDelete(_ credentials: [Credential], context: ModelContext) {
+    /// Returns the IDs of credentials that failed to delete from keychain.
+    @discardableResult
+    func bulkDelete(_ credentials: [Credential], context: ModelContext) -> [String] {
+        var failedIDs: [String] = []
         for credential in credentials {
-            KeychainService.shared.deletePassword(for: credential.id)
-            context.delete(credential)
+            if KeychainService.shared.deletePassword(for: credential.id) {
+                context.delete(credential)
+                selectedIDs.remove(credential.id)
+            } else {
+                failedIDs.append(credential.id)
+            }
         }
-        selectedIDs.removeAll()
+        return failedIDs
     }
 
     /// Move the given credentials to the exclude list: their domains are added
@@ -111,8 +118,8 @@ class VaultViewModel {
         switch option {
         case .domain:
             return credentials.sorted {
-                if $0.domain == $1.domain { return $0.username < $1.username }
-                return $0.domain < $1.domain
+                if $0.displayDomain == $1.displayDomain { return $0.username < $1.username }
+                return $0.displayDomain < $1.displayDomain
             }
         case .recentlyUsed:
             return credentials.sorted { lhs, rhs in
