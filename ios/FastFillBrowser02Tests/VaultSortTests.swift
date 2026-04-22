@@ -85,4 +85,11 @@ struct VaultSortTests {
         let ex = ExcludedDomain(domain: "www.example.com")
         #expect(ex.displayDomain == "example.com")
     }
+
+    @Test @MainActor
+    func excludedDomain_displayOnlyStripsLeadingWww() {
+        // "awww.example.com" must NOT be mangled — only a leading "www." prefix is stripped.
+        let ex = ExcludedDomain(domain: "awww.example.com")
+        #expect(ex.displayDomain == "awww.example.com")
+    }
 }
