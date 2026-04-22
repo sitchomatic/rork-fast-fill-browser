@@ -64,7 +64,8 @@ class VaultViewModel {
     /// are removed. Returns the number of unique domains excluded.
     @discardableResult
     func bulkMoveToExcludeList(_ credentials: [Credential], context: ModelContext) -> Int {
-        let domains = Set(credentials.map { $0.domain.lowercased() })
+        let domains = Set(credentials.map { ExcludedDomain.canonicalize($0.domain) })
+            .filter { !$0.isEmpty }
         for domain in domains {
             addExcludedDomain(domain, context: context)
         }
@@ -74,13 +75,13 @@ class VaultViewModel {
 
     /// Add a domain to the exclude list if it isn't already excluded.
     func addExcludedDomain(_ domain: String, context: ModelContext) {
-        let lowered = domain.lowercased()
-        guard !lowered.isEmpty else { return }
+        let canonical = ExcludedDomain.canonicalize(domain)
+        guard !canonical.isEmpty else { return }
         let descriptor = FetchDescriptor<ExcludedDomain>(
-            predicate: #Predicate<ExcludedDomain> { $0.domain == lowered }
+            predicate: #Predicate<ExcludedDomain> { $0.domain == canonical }
         )
         if (try? context.fetch(descriptor).first) == nil {
-            context.insert(ExcludedDomain(domain: lowered))
+            context.insert(ExcludedDomain(domain: canonical))
         }
     }
 
@@ -116,19 +117,32 @@ class VaultViewModel {
         case .recentlyUsed:
             return credentials.sorted { lhs, rhs in
                 switch (lhs.lastUsedAt, rhs.lastUsedAt) {
-                case let (l?, r?): return l > r
-                case (_?, nil):    return true
-                case (nil, _?):    return false
-                default:           return lhs.username < rhs.username
+                case let (l?, r?) where l != r: return l > r
+                case (_?, nil): return true
+                case (nil, _?): return false
+                default: break
                 }
+                if lhs.displayDomain != rhs.displayDomain {
+                    return lhs.displayDomain < rhs.displayDomain
+                }
+                return lhs.username < rhs.username
             }
         case .mostUsed:
             return credentials.sorted { lhs, rhs in
                 if lhs.usageCount != rhs.usageCount { return lhs.usageCount > rhs.usageCount }
+                if lhs.displayDomain != rhs.displayDomain {
+                    return lhs.displayDomain < rhs.displayDomain
+                }
                 return lhs.username < rhs.username
             }
         case .recentlyAdded:
-            return credentials.sorted { $0.createdAt > $1.createdAt }
+            return credentials.sorted { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+                if lhs.displayDomain != rhs.displayDomain {
+                    return lhs.displayDomain < rhs.displayDomain
+                }
+                return lhs.username < rhs.username
+            }
         }
     }
 }

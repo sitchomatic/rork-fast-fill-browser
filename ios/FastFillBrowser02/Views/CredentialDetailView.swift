@@ -169,7 +169,12 @@ struct CredentialDetailView: View {
     }
 
     private func moveToExcludeList() {
-        let domain = credential.domain.lowercased()
+        let domain = ExcludedDomain.canonicalize(credential.domain)
+        guard !domain.isEmpty else {
+            KeychainService.shared.deletePassword(for: credential.id)
+            modelContext.delete(credential)
+            return
+        }
         let descriptor = FetchDescriptor<ExcludedDomain>(
             predicate: #Predicate<ExcludedDomain> { $0.domain == domain }
         )

@@ -70,11 +70,7 @@ struct ExcludedDomainsView: View {
     }
 
     private var trimmedDomain: String {
-        newDomain
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .replacingOccurrences(of: "https://", with: "")
-            .replacingOccurrences(of: "http://", with: "")
+        ExcludedDomain.canonicalize(newDomain)
     }
 
     private func addDomain() {

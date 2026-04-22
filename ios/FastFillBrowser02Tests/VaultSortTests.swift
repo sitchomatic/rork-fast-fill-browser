@@ -92,4 +92,77 @@ struct VaultSortTests {
         let ex = ExcludedDomain(domain: "awww.example.com")
         #expect(ex.displayDomain == "awww.example.com")
     }
+
+    @Test @MainActor
+    func credentialDisplayDomain_onlyStripsLeadingWww() {
+        // Regression: `awww.example.com` must not become `a.example.com`.
+        let bare = Credential(domain: "example.com", username: "u")
+        #expect(bare.displayDomain == "example.com")
+
+        let prefixed = Credential(domain: "www.example.com", username: "u")
+        #expect(prefixed.displayDomain == "example.com")
+
+        let tricky = Credential(domain: "awww.example.com", username: "u")
+        #expect(tricky.displayDomain == "awww.example.com")
+    }
+
+    @Test @MainActor
+    func excludedDomain_canonicalize_stripsSchemeAndPath() {
+        #expect(ExcludedDomain.canonicalize("  HTTPS://Example.com/Login  ") == "example.com")
+        #expect(ExcludedDomain.canonicalize("http://www.example.com") == "example.com")
+        #expect(ExcludedDomain.canonicalize("example.com/path") == "example.com")
+        #expect(ExcludedDomain.canonicalize("www.example.com") == "example.com")
+        #expect(ExcludedDomain.canonicalize("awww.example.com") == "awww.example.com")
+        #expect(ExcludedDomain.canonicalize("") == "")
+        #expect(ExcludedDomain.canonicalize("   ") == "")
+    }
+
+    @Test @MainActor
+    func excludedDomain_initCanonicalizesInput() {
+        let ex = ExcludedDomain(domain: "https://WWW.Example.com/login")
+        #expect(ex.domain == "example.com")
+        #expect(ex.displayDomain == "example.com")
+    }
+
+    @Test @MainActor
+    func sortByRecentlyUsed_tieBreaksOnDomainThenUsername() {
+        // All three have `lastUsedAt == nil` so they should fall back to
+        // domain-then-username, not just username.
+        let creds = [
+            makeCredential(domain: "b.com", username: "alice"),
+            makeCredential(domain: "a.com", username: "bob"),
+            makeCredential(domain: "a.com", username: "alice"),
+        ]
+        let sorted = VaultViewModel.sortCredentials(creds, by: .recentlyUsed)
+        #expect(sorted.map { "\($0.domain)/\($0.username)" } == [
+            "a.com/alice", "a.com/bob", "b.com/alice",
+        ])
+    }
+
+    @Test @MainActor
+    func sortByMostUsed_tieBreaksOnDomainThenUsername() {
+        let creds = [
+            makeCredential(domain: "b.com", username: "alice", usageCount: 5),
+            makeCredential(domain: "a.com", username: "bob",   usageCount: 5),
+            makeCredential(domain: "a.com", username: "alice", usageCount: 5),
+        ]
+        let sorted = VaultViewModel.sortCredentials(creds, by: .mostUsed)
+        #expect(sorted.map { "\($0.domain)/\($0.username)" } == [
+            "a.com/alice", "a.com/bob", "b.com/alice",
+        ])
+    }
+
+    @Test @MainActor
+    func sortByRecentlyAdded_tieBreaksOnDomainThenUsername() {
+        let sharedDate = Date()
+        let creds = [
+            makeCredential(domain: "b.com", username: "alice", createdAt: sharedDate),
+            makeCredential(domain: "a.com", username: "bob",   createdAt: sharedDate),
+            makeCredential(domain: "a.com", username: "alice", createdAt: sharedDate),
+        ]
+        let sorted = VaultViewModel.sortCredentials(creds, by: .recentlyAdded)
+        #expect(sorted.map { "\($0.domain)/\($0.username)" } == [
+            "a.com/alice", "a.com/bob", "b.com/alice",
+        ])
+    }
 }

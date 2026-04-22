@@ -225,10 +225,10 @@ class BrowserViewModel {
     /// Returns true when the user has excluded this domain from auto-fill /
     /// save prompts. Results are cached and invalidated on-demand.
     func isDomainExcluded(_ domain: String) -> Bool {
-        let lowDomain = domain.lowercased()
-        guard !lowDomain.isEmpty else { return false }
+        let canonical = ExcludedDomain.canonicalize(domain)
+        guard !canonical.isEmpty else { return false }
         if !excludedDomainCacheLoaded { reloadExcludedDomains() }
-        return excludedDomainCache.contains(lowDomain)
+        return excludedDomainCache.contains(canonical)
     }
 
     func reloadExcludedDomains() {
@@ -254,7 +254,13 @@ class BrowserViewModel {
             pendingFillScriptIndex = nil
             return
         }
-        let nextIndex = (currentRotationIndex + 1) % matchingCredentials.count
+        // `currentRotationIndex` already points at the credential that will be
+        // filled on the *next* `rotateCredential()` call (it is incremented
+        // before this function is invoked), so prewarm that index — not one
+        // beyond it — otherwise the cache is always two steps ahead and the
+        // `pendingIndex == currentRotationIndex` check at the fill site never
+        // matches.
+        let nextIndex = currentRotationIndex % matchingCredentials.count
         let nextCredential = matchingCredentials[nextIndex]
         guard let password = passwordCache[nextCredential.id] else {
             pendingFillScript = nil

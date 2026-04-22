@@ -16,9 +16,13 @@ struct VaultView: View {
     }
 
     private var filteredCredentials: [Credential] {
-        // Credentials whose domain is on the exclude list are hidden from the
-        // active vault — they will instead appear in the "Excluded" sheet.
-        let base = credentials.filter { !excludedDomainSet.contains($0.domain) }
+        // Credentials whose canonical domain is on the exclude list are hidden
+        // from the active vault — they will instead appear in the "Excluded"
+        // sheet. Canonicalizing the credential side here protects against older
+        // credentials that may have been stored with a leading `www.`.
+        let base = credentials.filter {
+            !excludedDomainSet.contains(ExcludedDomain.canonicalize($0.domain))
+        }
         guard !viewModel.searchText.isEmpty else { return base }
         let search = viewModel.searchText.lowercased()
         return base.filter {
@@ -80,7 +84,7 @@ struct VaultView: View {
         .listStyle(.insetGrouped)
         .environment(\.editMode, editModeBinding)
         .overlay {
-            if credentials.isEmpty {
+            if credentials.isEmpty && excludedDomains.isEmpty {
                 ContentUnavailableView(
                     "No Saved Credentials",
                     systemImage: "lock.shield",
@@ -134,9 +138,8 @@ struct VaultView: View {
         ) {
             Button("Move to Exclude List", role: .destructive) {
                 let toMove = credentials.filter { viewModel.selectedIDs.contains($0.id) }
-                let count = viewModel.bulkMoveToExcludeList(toMove, context: modelContext)
+                viewModel.bulkMoveToExcludeList(toMove, context: modelContext)
                 viewModel.isEditMode = false
-                _ = count
             }
         } message: {
             Text("Their domains will be skipped for auto-fill and save prompts, and the credentials will be removed.")
