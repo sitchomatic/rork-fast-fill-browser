@@ -12,7 +12,7 @@ nonisolated struct CredentialDTO: Sendable, Identifiable {
     let usageCount: Int
 
     var displayDomain: String {
-        domain.replacingOccurrences(of: "www.", with: "")
+        domain.hasPrefix("www.") ? String(domain.dropFirst(4)) : domain
     }
 
     @MainActor
