@@ -178,6 +178,18 @@ struct VaultSortTests {
         #expect(CredentialImportService.extractDomain(from: "HTTPS://Example.COM") == "example.com")
     }
 
+    @Test @MainActor
+    func browserTab_domain_onlyStripsLeadingWww() {
+        let prefixed = BrowserTab(url: URL(string: "https://www.example.com/login")!)
+        #expect(prefixed.domain == "example.com")
+
+        let tricky = BrowserTab(url: URL(string: "https://awww.example.com/login")!)
+        #expect(tricky.domain == "awww.example.com")
+
+        let bare = BrowserTab(url: URL(string: "https://example.com")!)
+        #expect(bare.domain == "example.com")
+    }
+
     // MARK: - Bulk delete / move-to-exclude result contracts
 
     @Test @MainActor
