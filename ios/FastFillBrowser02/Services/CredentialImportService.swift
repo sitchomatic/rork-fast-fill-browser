@@ -69,14 +69,7 @@ struct CredentialImportService {
     }
 
     static func extractDomain(from urlString: String) -> String {
-        if let url = URL(string: urlString), let host = url.host(percentEncoded: false) {
-            return host.lowercased().replacingOccurrences(of: "www.", with: "")
-        }
-        let cleaned = urlString
-            .replacingOccurrences(of: "https://", with: "")
-            .replacingOccurrences(of: "http://", with: "")
-            .replacingOccurrences(of: "www.", with: "")
-        return cleaned.components(separatedBy: "/").first?.lowercased() ?? ""
+        return ExcludedDomain.canonicalize(urlString)
     }
 
     private static func parseCSVLine(_ line: String) -> [String] {

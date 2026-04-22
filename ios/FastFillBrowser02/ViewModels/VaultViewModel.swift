@@ -1,6 +1,23 @@
 import SwiftUI
 import SwiftData
 
+enum VaultSortOption: String, CaseIterable, Identifiable {
+    case domain = "Domain"
+    case recentlyUsed = "Recently Used"
+    case mostUsed = "Most Used"
+    case recentlyAdded = "Recently Added"
+
+    var id: String { rawValue }
+    var systemImage: String {
+        switch self {
+        case .domain: return "textformat.abc"
+        case .recentlyUsed: return "clock.arrow.circlepath"
+        case .mostUsed: return "chart.bar.fill"
+        case .recentlyAdded: return "calendar.badge.plus"
+        }
+    }
+}
+
 @Observable
 @MainActor
 class VaultViewModel {
@@ -8,11 +25,92 @@ class VaultViewModel {
     var isShowingAddCredential: Bool = false
     var isShowingImport: Bool = false
     var isShowingPasswordGenerator: Bool = false
+    var isShowingExcludedDomains: Bool = false
     var selectedCredential: Credential?
+    var sortOption: VaultSortOption = .recentlyUsed
 
-    func deleteCredential(_ credential: Credential, context: ModelContext) {
-        KeychainService.shared.deletePassword(for: credential.id)
+    /// IDs of credentials selected while in multi-select (edit) mode.
+    var selectedIDs: Set<String> = []
+    var isEditMode: Bool = false
+
+    func toggleSelection(_ credential: Credential) {
+        if selectedIDs.contains(credential.id) {
+            selectedIDs.remove(credential.id)
+        } else {
+            selectedIDs.insert(credential.id)
+        }
+    }
+
+    func clearSelection() {
+        selectedIDs.removeAll()
+    }
+
+    /// Delete a credential + its keychain password. The SwiftData row is only
+    /// removed if the keychain purge succeeded, to avoid leaving an orphaned
+    /// keychain item behind a deleted row. Returns `true` if both the keychain
+    /// and model delete succeeded.
+    @discardableResult
+    func deleteCredential(_ credential: Credential, context: ModelContext) -> Bool {
+        guard KeychainService.shared.deletePassword(for: credential.id) else {
+            return false
+        }
         context.delete(credential)
+        selectedIDs.remove(credential.id)
+        return true
+    }
+
+    /// Delete every credential in `credentials`, purging each keychain entry.
+    /// Returns the IDs of credentials that failed to delete from keychain.
+    @discardableResult
+    func bulkDelete(_ credentials: [Credential], context: ModelContext) -> [String] {
+        var failedIDs: [String] = []
+        for credential in credentials {
+            if KeychainService.shared.deletePassword(for: credential.id) {
+                context.delete(credential)
+                selectedIDs.remove(credential.id)
+            } else {
+                failedIDs.append(credential.id)
+            }
+        }
+        return failedIDs
+    }
+
+    struct BulkMoveResult {
+        /// Number of unique canonical domains added to the exclude list
+        /// (existing entries are not double-counted).
+        let domainsAdded: Int
+        /// Credential IDs whose keychain entry could not be purged. Their
+        /// SwiftData rows were left in place (see `bulkDelete`) so the caller
+        /// can surface the inconsistency instead of silently orphaning them.
+        let failedCredentialIDs: [String]
+    }
+
+    /// Move the given credentials to the exclude list: their canonical domains
+    /// are added to `ExcludedDomain` (deduped) and the credentials + keychain
+    /// entries are removed. The domain side is honored even when individual
+    /// credentials fail to delete, so the user's intent to stop autofill on
+    /// those domains still takes effect.
+    @discardableResult
+    func bulkMoveToExcludeList(_ credentials: [Credential], context: ModelContext) -> BulkMoveResult {
+        let domains = Set(credentials.map { ExcludedDomain.canonicalize($0.domain) })
+            .filter { !$0.isEmpty }
+        for domain in domains {
+            addExcludedDomain(domain, context: context)
+        }
+        let failed = bulkDelete(credentials, context: context)
+        return BulkMoveResult(domainsAdded: domains.count, failedCredentialIDs: failed)
+    }
+
+    /// Add a domain to the exclude list if it isn't already excluded.
+    func addExcludedDomain(_ domain: String, context: ModelContext) {
+        let canonical = ExcludedDomain.canonicalize(domain)
+        guard !canonical.isEmpty else { return }
+        let descriptor = FetchDescriptor<ExcludedDomain>(
+            predicate: #Predicate<ExcludedDomain> { $0.domain == canonical }
+        )
+        if (try? context.fetch(descriptor).first) == nil {
+            context.insert(ExcludedDomain(domain: canonical))
+        }
     }
 
     func importCredentials(_ imported: [ImportedCredential], context: ModelContext) -> Int {
@@ -29,5 +127,50 @@ class VaultViewModel {
             }
         }
         return count
+    }
+
+    /// Sort a flat list of credentials according to the current sort option.
+    /// Exposed as a `nonisolated static` helper so it is cheap to unit-test
+    /// without needing a ModelContext.
+    nonisolated static func sortCredentials(
+        _ credentials: [Credential],
+        by option: VaultSortOption
+    ) -> [Credential] {
+        switch option {
+        case .domain:
+            return credentials.sorted {
+                if $0.displayDomain == $1.displayDomain { return $0.username < $1.username }
+                return $0.displayDomain < $1.displayDomain
+            }
+        case .recentlyUsed:
+            return credentials.sorted { lhs, rhs in
+                switch (lhs.lastUsedAt, rhs.lastUsedAt) {
+                case let (l?, r?) where l != r: return l > r
+                case (_?, nil): return true
+                case (nil, _?): return false
+                default: break
+                }
+                if lhs.displayDomain != rhs.displayDomain {
+                    return lhs.displayDomain < rhs.displayDomain
+                }
+                return lhs.username < rhs.username
+            }
+        case .mostUsed:
+            return credentials.sorted { lhs, rhs in
+                if lhs.usageCount != rhs.usageCount { return lhs.usageCount > rhs.usageCount }
+                if lhs.displayDomain != rhs.displayDomain {
+                    return lhs.displayDomain < rhs.displayDomain
+                }
+                return lhs.username < rhs.username
+            }
+        case .recentlyAdded:
+            return credentials.sorted { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+                if lhs.displayDomain != rhs.displayDomain {
+                    return lhs.displayDomain < rhs.displayDomain
+                }
+                return lhs.username < rhs.username
+            }
+        }
     }
 }

@@ -11,7 +11,8 @@ struct FastFillBrowser02App: App {
             Credential.self,
             SiteSetting.self,
             BrowsingHistoryEntry.self,
-            Bookmark.self
+            Bookmark.self,
+            ExcludedDomain.self
         ])
     }
 }

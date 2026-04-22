@@ -44,7 +44,16 @@ class BrowserViewModel {
     private var credentialCache: [String: [Credential]] = [:]
     private var passwordCache: [String: String] = [:]
     private var siteSettingCache: [String: SiteSetting?] = [:]
+    private var excludedDomainCache: Set<String> = []
+    private var excludedDomainCacheLoaded: Bool = false
     private var pendingFillScript: String?
+    /// The credential the prewarmed fill script was built for. We key on the
+    /// credential ID (and not just the rotation index) so that a prewarm
+    /// left over from a previous domain/matching-set cannot be used against
+    /// a different credential after navigation — indices collide (both
+    /// reset to 0 after `loadMatchingCredentials`) but credential IDs are
+    /// unique UUIDs.
+    private var pendingFillScriptCredentialID: String?
     private var historyDebounceTask: Task<Void, Never>?
     private var lastHistoryURL: String = ""
     private var sureLoginTask: Task<Void, Never>?
@@ -56,6 +65,7 @@ class BrowserViewModel {
 
     func setup(modelContext: ModelContext) {
         self.modelContext = modelContext
+        reloadExcludedDomains()
         if tabs.isEmpty {
             addNewTab()
         }
@@ -133,6 +143,11 @@ class BrowserViewModel {
 
     func loadMatchingCredentials(for domain: String) {
         let lowDomain = domain.lowercased()
+        // A prewarmed script always belongs to the *previous* matching-set.
+        // Drop it on every load so a stale script from domain A can never be
+        // fired against a form on domain B.
+        pendingFillScript = nil
+        pendingFillScriptCredentialID = nil
 
         if let cached = credentialCache[lowDomain] {
             matchingCredentials = cached
@@ -170,7 +185,13 @@ class BrowserViewModel {
 
     private func prefetchPasswords(for credentials: [Credential]) {
         let idsToFetch = credentials.map(\.id).filter { passwordCache[$0] == nil }
-        guard !idsToFetch.isEmpty else { return }
+        // All passwords are already in cache — skip the keychain round-trip but
+        // still prewarm, so the first rotation after a cached domain reload
+        // can actually use the prewarmed fill script.
+        guard !idsToFetch.isEmpty else {
+            prewarmNextCredential()
+            return
+        }
 
         let ids = idsToFetch
         Task {
@@ -216,17 +237,50 @@ class BrowserViewModel {
         siteSettingCache.removeValue(forKey: domain.lowercased())
     }
 
+    // MARK: - Excluded Domains
+
+    /// Returns true when the user has excluded this domain from auto-fill /
+    /// save prompts. Results are cached and invalidated on-demand.
+    func isDomainExcluded(_ domain: String) -> Bool {
+        let canonical = ExcludedDomain.canonicalize(domain)
+        guard !canonical.isEmpty else { return false }
+        if !excludedDomainCacheLoaded { reloadExcludedDomains() }
+        return excludedDomainCache.contains(canonical)
+    }
+
+    func reloadExcludedDomains() {
+        guard let context = modelContext else {
+            excludedDomainCache = []
+            excludedDomainCacheLoaded = true
+            return
+        }
+        let descriptor = FetchDescriptor<ExcludedDomain>()
+        if let results = try? context.fetch(descriptor) {
+            excludedDomainCache = Set(results.map { $0.domain })
+        } else {
+            excludedDomainCache = []
+        }
+        excludedDomainCacheLoaded = true
+    }
+
     // MARK: - Pre-warm Next Credential (#16)
 
     private func prewarmNextCredential() {
         guard matchingCredentials.count > 1 else {
             pendingFillScript = nil
+            pendingFillScriptCredentialID = nil
             return
         }
-        let nextIndex = (currentRotationIndex + 1) % matchingCredentials.count
+        // `currentRotationIndex` already points at the credential that will be
+        // filled on the *next* `rotateCredential()` call (it is incremented
+        // before this function is invoked), so prewarm that index — not one
+        // beyond it — otherwise the cache is always two steps ahead and the
+        // credential-ID check at the fill site never matches.
+        let nextIndex = currentRotationIndex % matchingCredentials.count
         let nextCredential = matchingCredentials[nextIndex]
         guard let password = passwordCache[nextCredential.id] else {
             pendingFillScript = nil
+            pendingFillScriptCredentialID = nil
             return
         }
         let siteSetting = fetchSiteSetting(for: activeTab?.domain ?? "")
@@ -236,6 +290,7 @@ class BrowserViewModel {
             usernameSelector: siteSetting?.usernameSelector,
             passwordSelector: siteSetting?.passwordSelector
         )
+        pendingFillScriptCredentialID = nextCredential.id
     }
 
     // MARK: - Credential Rotation (RC)
@@ -250,9 +305,12 @@ class BrowserViewModel {
         let siteSetting = fetchSiteSetting(for: activeTab?.domain ?? "")
 
         let script: String
-        if let pending = pendingFillScript, currentRotationIndex == (currentRotationIndex) {
+        if let pending = pendingFillScript,
+           let pendingID = pendingFillScriptCredentialID,
+           pendingID == credential.id {
             script = pending
             pendingFillScript = nil
+            pendingFillScriptCredentialID = nil
         } else {
             guard let password = getCachedPassword(for: credential.id) else {
                 showToast("Password not found in keychain")
@@ -442,6 +500,13 @@ class BrowserViewModel {
     // MARK: - Form Detection
 
     func checkForLoginForm() {
+        // Honor the global "Auto-fill on Page Load" toggle and the per-domain
+        // exclude list — no detection should run if the user has opted out.
+        let autoFillEnabled = UserDefaults.standard.object(forKey: "autoFillOnPageLoad") as? Bool ?? true
+        guard autoFillEnabled else { return }
+        let domain = activeTab?.domain ?? ""
+        guard !isDomainExcluded(domain) else { return }
+
         let script = JavaScriptInjectionService.detectLoginFormScript()
         activeTab?.webView?.evaluateJavaScript(script) { [weak self] result, _ in
             Task { @MainActor in
@@ -478,6 +543,13 @@ class BrowserViewModel {
     }
 
     func detectAndOfferSave() {
+        // Honor the global "Offer to Save New Passwords" toggle and the
+        // per-domain exclude list.
+        let offerEnabled = UserDefaults.standard.object(forKey: "offerToSavePasswords") as? Bool ?? true
+        guard offerEnabled else { return }
+        let domain = activeTab?.domain ?? ""
+        guard !isDomainExcluded(domain) else { return }
+
         let script = JavaScriptInjectionService.extractFilledCredentialsScript()
         activeTab?.webView?.evaluateJavaScript(script) { [weak self] result, _ in
             Task { @MainActor in
@@ -502,6 +574,12 @@ class BrowserViewModel {
 
     func saveDetectedCredential() {
         guard let context = modelContext, let domain = activeTab?.domain else { return }
+        guard !isDomainExcluded(domain) else {
+            showToast("Domain is on the exclude list")
+            detectedUsername = ""
+            detectedPassword = ""
+            return
+        }
         let credential = Credential(domain: domain, username: detectedUsername)
         context.insert(credential)
         _ = KeychainService.shared.savePassword(detectedPassword, for: credential.id)

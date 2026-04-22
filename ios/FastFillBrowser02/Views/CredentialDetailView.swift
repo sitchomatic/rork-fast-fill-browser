@@ -12,6 +12,7 @@ struct CredentialDetailView: View {
     @State private var editPassword: String = ""
     @State private var editNotes: String = ""
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showExcludeConfirmation: Bool = false
 
     var body: some View {
         Form {
@@ -90,6 +91,11 @@ struct CredentialDetailView: View {
 
             if !isEditing {
                 Section {
+                    Button("Move to Exclude List", systemImage: "nosign") {
+                        showExcludeConfirmation = true
+                    }
+                    .tint(.orange)
+
                     Button("Delete Credential", role: .destructive) {
                         showDeleteConfirmation = true
                     }
@@ -130,6 +136,18 @@ struct CredentialDetailView: View {
         } message: {
             Text("This will permanently delete the credential for \(credential.username)")
         }
+        .confirmationDialog(
+            "Move to Exclude List?",
+            isPresented: $showExcludeConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Move to Exclude List", role: .destructive) {
+                moveToExcludeList()
+                dismiss()
+            }
+        } message: {
+            Text("\(credential.displayDomain) will be skipped for auto-fill and save prompts, and this credential will be removed.")
+        }
     }
 
     private func startEditing() {
@@ -148,5 +166,22 @@ struct CredentialDetailView: View {
             password = editPassword
         }
         isEditing = false
+    }
+
+    private func moveToExcludeList() {
+        let domain = ExcludedDomain.canonicalize(credential.domain)
+        guard !domain.isEmpty else {
+            KeychainService.shared.deletePassword(for: credential.id)
+            modelContext.delete(credential)
+            return
+        }
+        let descriptor = FetchDescriptor<ExcludedDomain>(
+            predicate: #Predicate<ExcludedDomain> { $0.domain == domain }
+        )
+        if (try? modelContext.fetch(descriptor).first) == nil {
+            modelContext.insert(ExcludedDomain(domain: domain))
+        }
+        KeychainService.shared.deletePassword(for: credential.id)
+        modelContext.delete(credential)
     }
 }

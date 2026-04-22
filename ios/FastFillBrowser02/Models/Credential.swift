@@ -34,6 +34,6 @@ class Credential {
     }
 
     var displayDomain: String {
-        domain.replacingOccurrences(of: "www.", with: "")
+        domain.hasPrefix("www.") ? String(domain.dropFirst(4)) : domain
     }
 }

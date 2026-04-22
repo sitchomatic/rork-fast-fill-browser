@@ -32,7 +32,14 @@ struct BrowserView: View {
             await WebViewConfigurationFactory.shared.prepare()
             DNSPrewarmService.shared.prewarmTopDomains(modelContext: modelContext)
         }
-        .sheet(item: $viewModel.presentedSheet) { sheet in
+        .sheet(item: $viewModel.presentedSheet, onDismiss: {
+            // Vault / Excluded Domains / Site Settings may have changed — refresh
+            // the caches the browser relies on for automation, and drop any
+            // cached credential references that may point at rows the user
+            // just deleted or moved to the exclude list (stale SwiftData refs).
+            viewModel.reloadExcludedDomains()
+            viewModel.invalidateCredentialCache()
+        }) { sheet in
             sheetContent(for: sheet)
         }
         .alert("Save Login?", isPresented: $viewModel.isShowingSaveCredentialAlert) {
